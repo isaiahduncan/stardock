@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Lets a net8.0 build run on a newer installed runtime (9, 10, ...). -->
+    <RollForward>Major</RollForward>
+    <!-- Skip the unsigned Starter.exe launcher; Windows Application Control can block it. -->
+    <UseAppHost>false</UseAppHost>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.*" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.*" />
+  </ItemGroup>
+
+</Project>

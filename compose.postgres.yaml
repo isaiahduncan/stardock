@@ -1,0 +1,23 @@
+# Fallback if the interview spec turns out to be clearly relational.
+# Run with: docker compose -f compose.postgres.yaml up -d
+# Starts an EMPTY Postgres 16. The C# app in src/ talks to Cosmos only; you would add Npgsql for this.
+services:
+  db:
+    image: postgres:16
+    container_name: interview-postgres
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  pgdata:

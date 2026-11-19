@@ -1,0 +1,18 @@
+/* Loaded after Pico, so these rules override Pico's defaults. */
+
+:root {
+  font-size: 87.5%;                              /* Pico scales everything from the root size */
+  --pico-spacing: .75rem;                        /* base gap; also the padding in table cells */
+  --pico-form-element-spacing-vertical: .5rem;   /* padding inside inputs, textareas and buttons */
+  --pico-form-element-spacing-horizontal: .75rem;
+  --pico-typography-spacing-vertical: 1rem;      /* space under headings and paragraphs */
+}
+
+form.new { max-width: 32rem; margin-bottom: 1.5rem; }
+textarea { min-height: 5rem; }
+
+td pre { margin: 0; padding: .5rem; white-space: pre-wrap; }
+td form, td button { margin: 0; }
+td button { padding: .25rem .75rem; }
+
+.error { color: #b00020; }

@@ -1,0 +1,61 @@
+@model List<JObject>
+@{
+    var error = ViewData["Error"] as string;
+
+    // Cosmos adds these bookkeeping fields to every document; hide them from the page.
+    var systemFields = new[] { "_rid", "_self", "_etag", "_attachments", "_ts" };
+}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@picocss/pico@@2/css/pico.min.css">
+  <title>stardock</title>
+  <link rel="stylesheet" href="/site.css">
+</head>
+<body>
+  <main class="container-fluid">
+  <h1>Documents</h1>
+
+  @if (!string.IsNullOrEmpty(error))
+  {
+    <p class="error">@error</p>
+  }
+
+  <form class="new" method="post" action="/items">
+    <input name="partitionKey" placeholder="Partition key (e.g. notes)" required>
+    <textarea name="json" placeholder='{"title": "hello"}' required></textarea>
+    <button>Save document</button>
+  </form>
+
+  <table>
+    <thead><tr><th>Partition key</th><th>Document</th><th></th></tr></thead>
+    <tbody>
+      @foreach (var item in Model)
+      {
+        var partitionKey = (string?)item["partitionKey"] ?? "";
+        var id = (string?)item["id"] ?? "";
+
+        var visible = (JObject)item.DeepClone();
+        foreach (var field in systemFields)
+        {
+          visible.Remove(field);
+        }
+
+        <tr>
+          <td>@partitionKey</td>
+          <td><pre>@visible.ToString()</pre></td>
+          <td>
+            <form method="post" action="/items/@Uri.EscapeDataString(partitionKey)/@Uri.EscapeDataString(id)/delete">
+              <button class="outline secondary">Delete</button>
+            </form>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  </main>
+</body>
+</html>

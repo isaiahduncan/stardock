@@ -1,0 +1,17 @@
+# Docker Compose finds this file by name. "compose.yaml" is the preferred name;
+# compose.yml, docker-compose.yaml and docker-compose.yml also work. Any other name needs -f.
+services:
+  cosmos:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest
+    container_name: interview-cosmos
+    # The .NET SDK does not support the emulator's default HTTP mode, so run it over HTTPS.
+    command: ["--protocol", "https"]
+    ports:
+      - "8081:8081" # gateway endpoint the app connects to
+      - "8080:8080" # Microsoft's HTTPS example publishes this port too
+      - "1234:1234" # Data Explorer UI
+    volumes:
+      - cosmosdata:/data # keeps data across restarts; "docker compose down -v" wipes it
+
+volumes:
+  cosmosdata:
