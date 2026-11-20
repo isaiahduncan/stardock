@@ -8,7 +8,34 @@
   --pico-typography-spacing-vertical: 1rem;      /* space under headings and paragraphs */
 }
 
-form.new { max-width: 32rem; margin-bottom: 1.5rem; }
+/* Two columns filling the window: form on the left, documents on the right. */
+main.layout {
+  display: grid;
+  grid-template-columns: minmax(18rem, 26rem) 1fr;
+  gap: 1.5rem;
+  height: 100vh;
+  padding-block: 1rem;
+  box-sizing: border-box;
+}
+
+/* Left column: heading pinned at the top; the form fills the rest of the height. */
+.compose { display: flex; flex-direction: column; min-height: 0; }
+.compose h1 { flex: none; }
+
+/* The form stretches to the bottom; the JSON box grows, the Save button stays at the bottom. */
+form.new { display: flex; flex-direction: column; flex: 1; min-height: 0; margin-bottom: 0; }
+form.new textarea { flex: 1; resize: none; }
+form.new button { flex: none; }
+
+/* Right column: scrolls on its own; the header row stays visible. */
+.documents { overflow-y: auto; min-height: 0; }
+.documents thead th { position: sticky; top: 0; background: var(--pico-background-color); z-index: 1; }
+
+/* Stack the columns on narrow screens. */
+@media (max-width: 800px) {
+  main.layout { display: block; height: auto; }
+}
+
 textarea { min-height: 5rem; }
 
 td pre { margin: 0; padding: .5rem; white-space: pre-wrap; }

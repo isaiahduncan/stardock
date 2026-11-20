@@ -16,7 +16,8 @@
   <link rel="stylesheet" href="/site.css">
 </head>
 <body>
-  <main class="container-fluid">
+  <main class="container-fluid layout">
+  <section class="compose">
   <h1>Documents</h1>
 
   @if (!string.IsNullOrEmpty(error))
@@ -29,7 +30,9 @@
     <textarea name="json" placeholder='{"title": "hello"}' required></textarea>
     <button>Save document</button>
   </form>
+  </section>
 
+  <section class="documents">
   <table>
     <thead><tr><th>Partition key</th><th>Document</th><th></th></tr></thead>
     <tbody>
@@ -56,6 +59,7 @@
       }
     </tbody>
   </table>
+  </section>
   </main>
 </body>
 </html>
