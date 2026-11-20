@@ -8,7 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 var endpoint = builder.Configuration["COSMOS_ENDPOINT"] ?? "https://localhost:8081";
 var key = builder.Configuration["COSMOS_KEY"] ?? WellKnownEmulatorKey;
 
-builder.Services.AddSingleton(await CosmosStore.ConnectAsync(endpoint, key));
+var container = await CosmosBootstrap.CreateContainerAsync(endpoint, key);
+builder.Services.AddSingleton(new CosmosStore(container));
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();

@@ -18,7 +18,7 @@ dotnet run --urls http://localhost:5000   # waits for the emulator, then serves 
 
 ## Why HTTPS
 
-Microsoft's docs say the .NET SDK doesn't support the emulator's default HTTP mode, so `compose.yaml` starts it with `--protocol https`. The emulator's certificate is self-signed. `CosmosStore.cs` accepts any certificate, but only when the endpoint is loopback (localhost).
+Microsoft's docs say the .NET SDK doesn't support the emulator's default HTTP mode, so `compose.yaml` starts it with `--protocol https`. The emulator's certificate is self-signed. `Storage/CosmosBootstrap.cs` accepts any certificate, but only when the endpoint is loopback (localhost).
 
 ## Settings
 
@@ -47,7 +47,7 @@ docker compose -f compose.postgres.yaml up -d
 ## When the spec arrives
 
 1. Ask the PM your questions and write down the access patterns (what gets read, how often, by which key).
-2. Choose the partition key from those patterns. `/partitionKey` in `CosmosStore.cs` is a placeholder. Be ready to explain the choice and the tradeoffs.
+2. Choose the partition key from those patterns. `/partitionKey` in `Storage/CosmosBootstrap.cs` is a placeholder. Be ready to explain the choice and the tradeoffs.
 3. Replace the generic JSON form in `Views/Home/Index.cshtml` with real fields, and add typed models once the shape is clear.
 
 ## Known emulator limits (from Microsoft's docs)
@@ -67,5 +67,6 @@ docker compose -f compose.postgres.yaml up -d
 | `src/Program.cs` | Startup only: connects to Cosmos, registers services, maps controllers |
 | `src/Controllers/ItemsController.cs` | JSON API under `/api/items` |
 | `src/Controllers/HomeController.cs` | The HTML page, form handlers and `/healthz` |
-| `src/CosmosStore.cs` | All Cosmos access (add, list, delete) |
+| `src/Storage/CosmosBootstrap.cs` | Startup setup: connects, creates the database and container, retries while the emulator boots |
+| `src/Storage/CosmosStore.cs` | Reads and writes documents (add, list, delete); no setup code |
 | `src/Views/Home/Index.cshtml` | The page, as a Razor template (HTML-encodes output automatically) |
