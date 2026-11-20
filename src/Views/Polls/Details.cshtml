@@ -1,0 +1,115 @@
+@model PollDetailsViewModel
+@section Styles {
+  <link rel="stylesheet" href="/poll.css">
+}
+@section Scripts {
+  <script src="/copy-link.js"></script>
+}
+@{
+    var poll = Model.Poll;
+    ViewData["Title"] = poll.Title;
+}
+<main class="container-fluid layout">
+  <section class="side">
+    <p><a href="/">&larr; All polls</a></p>
+
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+      <p class="error">@Model.Error</p>
+    }
+
+    @if (Model.Editing)
+    {
+      <h1>Edit poll</h1>
+      <form method="post" action="/polls/@poll.Id/edit">
+        <input type="hidden" name="eTag" value="@poll.ETag">
+        <label>
+          Title
+          <input name="title" value="@poll.Title" required>
+        </label>
+        <label>
+          Description
+          <textarea name="description">@poll.Description</textarea>
+        </label>
+        <fieldset>
+          <legend>Choices</legend>
+          @foreach (var choice in poll.Choices)
+          {
+            <input type="hidden" name="choiceIds" value="@choice.Id">
+            <input name="choiceTexts" value="@choice.Text" aria-label="Choice" required>
+          }
+          <small>Add more choices (choices can be renamed or added, not removed):</small>
+          <input name="newChoices" placeholder="New choice" aria-label="New choice">
+          <input name="newChoices" placeholder="New choice" aria-label="New choice">
+        </fieldset>
+        <div class="actions">
+          <button>Save changes</button>
+          <a role="button" class="secondary" href="/polls/@poll.Id">Cancel</a>
+        </div>
+      </form>
+    }
+    else
+    {
+      <header>
+        <h1>@poll.Title</h1>
+        @if (!string.IsNullOrEmpty(poll.Description))
+        {
+          <p>@poll.Description</p>
+        }
+        <div class="actions">
+          <a role="button" class="outline secondary" href="/polls/@poll.Id?edit=true">Edit poll</a>
+          <button type="button" class="outline secondary" data-copy-path="/polls/@poll.Id">Copy link</button>
+        </div>
+      </header>
+
+      <form method="post" action="/polls/@poll.Id/respond">
+        <fieldset>
+          <legend>Choose one</legend>
+          @foreach (var choice in poll.Choices)
+          {
+            <label>
+              <input type="radio" name="choiceId" value="@choice.Id" required>
+              @choice.Text
+            </label>
+          }
+        </fieldset>
+        <button>Submit response</button>
+      </form>
+    }
+  </section>
+
+  <section class="list">
+    <h2>Results</h2>
+    @foreach (var choice in poll.Choices)
+    {
+      var count = Model.CountFor(choice.Id);
+      <div class="result">
+        <span>@choice.Text</span>
+        <span>@count</span>
+        <progress value="@count" max="@Math.Max(Model.Responses.Count, 1)"></progress>
+      </div>
+    }
+
+    <h2>Responses <small>(@Model.Responses.Count)</small></h2>
+
+    @if (Model.Responses.Count == 0)
+    {
+      <p>No responses yet.</p>
+    }
+    else
+    {
+      <table>
+        <thead><tr><th>Choice</th><th>Submitted (UTC)</th></tr></thead>
+        <tbody>
+          @foreach (var response in Model.Responses)
+          {
+            <tr>
+              <td><a href="/polls/@poll.Id/responses/@response.Id">@Model.ChoiceText(response.ChoiceId)</a></td>
+              <td>@response.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm")</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</main>

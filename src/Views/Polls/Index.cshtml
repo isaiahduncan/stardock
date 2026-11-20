@@ -1,0 +1,48 @@
+@model IReadOnlyList<Poll>
+@section Styles {
+  <link rel="stylesheet" href="/index.css">
+}
+@{
+    var error = ViewData["Error"] as string;
+}
+<main class="container-fluid layout">
+  <section class="side">
+    <h1>Polls</h1>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+      <p class="error">@error</p>
+    }
+
+    <form class="new" method="post" action="/polls">
+      <input name="title" placeholder="Poll title" required>
+      <input name="description" placeholder="Description (optional)">
+      <textarea name="choices" class="grow" placeholder="One choice per line (at least two)" required></textarea>
+      <button>Create poll</button>
+    </form>
+  </section>
+
+  <section class="list">
+    @if (Model.Count == 0)
+    {
+      <p>No polls yet. Create the first one.</p>
+    }
+    else
+    {
+      <table>
+        <thead><tr><th>Title</th><th>Description</th><th>Choices</th><th>Created (UTC)</th></tr></thead>
+        <tbody>
+          @foreach (var poll in Model)
+          {
+            <tr>
+              <td><a href="/polls/@poll.Id">@poll.Title</a></td>
+              <td class="description">@poll.Description</td>
+              <td>@poll.Choices.Count</td>
+              <td>@poll.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm")</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</main>

@@ -1,21 +1,28 @@
 using Microsoft.Azure.Cosmos;
 
+/// <summary>The two containers the app uses.</summary>
+public sealed record CosmosContainers(Container Polls, Container Responses);
+
 /// <summary>
-/// One-time setup, run at startup: connects to Cosmos and makes sure the database and container exist.
-/// It lives apart from CosmosStore so the store only reads and writes documents.
+/// One-time setup, run at startup: connects to Cosmos and makes sure the database and both containers exist.
+/// It lives apart from the stores so they only read and write documents.
 /// </summary>
 public static class CosmosBootstrap
 {
     private const string DatabaseName = "app";
-    private const string ContainerName = "items";
 
-    // CosmosStore writes a "partitionKey" field into every document; this is the path that field is read from.
-    private const string PartitionKeyPath = "/partitionKey";
+    // Each poll is its own partition, so reading one poll by id is a single-partition point read.
+    private const string PollsContainerName = "polls";
+    private const string PollsPartitionKeyPath = "/id";
+
+    // Responses are partitioned by poll, so all the responses to one poll live together and can be counted in one partition.
+    private const string ResponsesContainerName = "responses";
+    private const string ResponsesPartitionKeyPath = "/pollId";
 
     /// <summary>
-    /// Connects, creating the database and container if missing. Retries while the emulator container is still starting up.
+    /// Connects, creating the database and containers if missing. Retries while the emulator container is still starting up.
     /// </summary>
-    public static async Task<Container> CreateContainerAsync(string endpoint, string key)
+    public static async Task<CosmosContainers> CreateContainersAsync(string endpoint, string key)
     {
         var options = new CosmosClientOptions
         {
@@ -39,9 +46,11 @@ public static class CosmosBootstrap
             try
             {
                 var database = (await client.CreateDatabaseIfNotExistsAsync(DatabaseName)).Database;
-                var container = await database.CreateContainerIfNotExistsAsync(
-                    new ContainerProperties(ContainerName, PartitionKeyPath));
-                return container.Container;
+                var polls = await database.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties(PollsContainerName, PollsPartitionKeyPath));
+                var responses = await database.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties(ResponsesContainerName, ResponsesPartitionKeyPath));
+                return new CosmosContainers(polls.Container, responses.Container);
             }
             catch (Exception error) when (attempt < 30)
             {

@@ -1,6 +1,6 @@
 # Interview 3 starter: C# + Cosmos DB emulator
 
-No domain data model. Documents are plain JSON, stored under a partition key value that you type into the form. The page, the form and the JSON API work for any spec until you decide on real types.
+A polling site on C# and a Cosmos DB emulator. People create a poll (a title, a description and a list of choices), anyone can open a poll and submit one response by picking a choice, and polls and responses can be edited afterwards. Edits are checked against the document's ETag, so an edit made from a stale page is rejected, not silently overwritten. Two containers: `polls` (partitioned by `/id`) and `responses` (partitioned by `/pollId`).
 
 **Status: not compiled or run.** It was written without access to the .NET SDK or the emulator. Do a full run once on your machine before interview day (see "First run" below) and fix anything that surfaces.
 
@@ -44,11 +44,14 @@ docker compose -f compose.postgres.yaml up -d
 | `docker compose down -v` | Stop it and wipe the data |
 | `docker compose logs -f cosmos` | Watch emulator logs |
 
-## When the spec arrives
+## Data
 
-1. Ask the PM your questions and write down the access patterns (what gets read, how often, by which key).
-2. Choose the partition key from those patterns. `/partitionKey` in `Storage/CosmosBootstrap.cs` is a placeholder. Be ready to explain the choice and the tradeoffs.
-3. Replace the generic JSON form in `Views/Home/Index.cshtml` with real fields, and add typed models once the shape is clear.
+| Container | Partition key | Fields |
+|---|---|---|
+| `polls` | `/id` | `id`, `title`, `description`, `choices` (each with `id` and `text`), `createdAt` |
+| `responses` | `/pollId` | `id`, `pollId`, `choiceId`, `createdAt` |
+
+A response stores the id of the choice, not its text, so renaming a choice doesn't break old responses. Choices can be renamed or added when editing a poll, never removed. There is no creator field yet; add one when there are accounts.
 
 ## Known emulator limits (from Microsoft's docs)
 
@@ -64,9 +67,27 @@ docker compose -f compose.postgres.yaml up -d
 
 | File | Role |
 |---|---|
-| `src/Program.cs` | Startup only: connects to Cosmos, registers services, maps controllers |
-| `src/Controllers/ItemsController.cs` | JSON API under `/api/items` |
-| `src/Controllers/HomeController.cs` | The HTML page, form handlers and `/healthz` |
-| `src/Storage/CosmosBootstrap.cs` | Startup setup: connects, creates the database and container, retries while the emulator boots |
-| `src/Storage/CosmosStore.cs` | Reads and writes documents (add, list, delete); no setup code |
-| `src/Views/Home/Index.cshtml` | The page, as a Razor template (HTML-encodes output automatically) |
+| `src/Program.cs` | Startup only: runs the Cosmos bootstrap, registers the stores, maps controllers |
+| `src/Storage/CosmosBootstrap.cs` | Startup setup: connects, creates the database and both containers, retries while the emulator boots |
+| `src/Storage/PollStore.cs` | Reads and writes poll documents (create, get, list, ETag-checked edit) |
+| `src/Storage/ResponseStore.cs` | Reads and writes responses (add, list for a poll, get, ETag-checked change of choice) |
+| `src/Storage/UpdateOutcome.cs` | Updated, Conflict or NotFound, returned by the checked edits |
+| `src/Models/` | `Poll` (with `Choice`), `PollResponse` and the two page view models |
+| `src/Controllers/PollsController.cs` | Front page, create, the poll page, respond and edit poll |
+| `src/Controllers/ResponsesController.cs` | The response page and edit response |
+| `src/Controllers/HealthController.cs` | `/healthz` |
+| `src/Views/Shared/_Layout.cshtml` | The page shell every view sits inside (head, Pico, `site.css`) |
+| `src/Views/Polls/Index.cshtml` | Front page: create form on the left, list of polls on the right |
+| `src/Views/Polls/Details.cshtml` | Poll page: poll info, edit and respond on the left, responses on the right |
+| `src/Views/Responses/Details.cshtml` | Response page: change which choice a response picked |
+| `src/wwwroot/copy-link.js` | The poll page's Copy link button |
+| `src/wwwroot/site.css`, `index.css`, `poll.css` | Shared styles (including the two-column grid), front-page styles, poll and response page styles |
+
+## Addresses
+
+| Address | Page |
+|---|---|
+| `/` | List of polls and the create form |
+| `/polls/{id}` | One poll: respond, see responses, edit (`?edit=true` shows the edit form) |
+| `/polls/{pollId}/responses/{id}` | One response, editable |
+| `/healthz` | Health check |

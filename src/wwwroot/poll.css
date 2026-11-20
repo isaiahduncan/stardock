@@ -1,0 +1,12 @@
+/* The poll page (info and response form on the left, responses on the right) and the response page. */
+
+/* The response page is a single narrow column. */
+main.poll { max-width: 40rem; padding-block: 1.5rem; }
+
+.side header .actions { margin-bottom: 1rem; }
+.actions { display: flex; gap: .75rem; align-items: center; }
+.actions a, .actions button { margin-bottom: 0; width: auto; }
+
+/* Results: one row per choice, with its count and a bar scaled to the number of responses. */
+.result { display: grid; grid-template-columns: 1fr auto; column-gap: 1rem; }
+.result progress { grid-column: 1 / -1; margin-bottom: .75rem; }

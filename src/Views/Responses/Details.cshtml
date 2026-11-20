@@ -1,0 +1,38 @@
+@model ResponseDetailsViewModel
+@section Styles {
+  <link rel="stylesheet" href="/poll.css">
+}
+@{
+    var poll = Model.Poll;
+    var response = Model.Response;
+    ViewData["Title"] = "Edit response";
+}
+<main class="container poll">
+  <p><a href="/polls/@poll.Id">&larr; Back to @poll.Title</a></p>
+
+  <h1>Edit response</h1>
+  <p>Submitted @response.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm") UTC</p>
+
+  @if (!string.IsNullOrEmpty(Model.Error))
+  {
+    <p class="error">@Model.Error</p>
+  }
+
+  <form method="post" action="/polls/@poll.Id/responses/@response.Id/edit">
+    <input type="hidden" name="eTag" value="@response.ETag">
+    <fieldset>
+      <legend>@poll.Title</legend>
+      @foreach (var choice in poll.Choices)
+      {
+        <label>
+          <input type="radio" name="choiceId" value="@choice.Id" checked="@(choice.Id == response.ChoiceId)" required>
+          @choice.Text
+        </label>
+      }
+    </fieldset>
+    <div class="actions">
+      <button>Save response</button>
+      <a role="button" class="secondary" href="/polls/@poll.Id">Cancel</a>
+    </div>
+  </form>
+</main>

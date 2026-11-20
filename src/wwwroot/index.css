@@ -1,0 +1,9 @@
+/* The front page: create-poll form on the left, list of polls on the right. */
+
+/* The form stretches to the bottom; the choices box grows, the button stays at the bottom. */
+form.new { display: flex; flex-direction: column; flex: 1; min-height: 0; margin-bottom: 0; }
+form.new textarea.grow { flex: 1; resize: none; }
+form.new button { flex: none; }
+
+/* Keep each row to one line; long descriptions are cut off with an ellipsis. */
+.list td.description { max-width: 24rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
