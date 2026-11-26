@@ -1,6 +1,6 @@
-# Fallback if the interview spec turns out to be clearly relational.
+# Postgres for the polling site (branch "postgres").
 # Run with: docker compose -f compose.postgres.yaml up -d
-# Starts an EMPTY Postgres 16. The C# app in src/ talks to Cosmos only; you would add Npgsql for this.
+# Starts Postgres 16 with user app, password app, database app. The tables are created by the app at startup.
 services:
   db:
     image: postgres:16

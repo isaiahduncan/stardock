@@ -1,87 +1,71 @@
-# Interview 3 starter: C# + Cosmos DB emulator
+# Polling site: C# + Postgres (branch `postgres`)
 
-A polling site on C# and a Cosmos DB emulator. People create a poll (a title, a description and a list of choices), anyone can open a poll and submit one response by picking a choice, and polls and responses can be edited afterwards. Edits are checked against the document's ETag, so an edit made from a stale page is rejected, not silently overwritten. Two containers: `polls` (partitioned by `/id`) and `responses` (partitioned by `/pollId`).
+A polling site on ASP.NET Core and Postgres. People create a poll (a title, a description and a list of choices), anyone can open a poll and submit one response by picking a choice, and polls and responses can be edited afterwards. Edits are checked against a version marker (the "ETag"), so an edit made from a stale page is rejected, not silently overwritten.
 
-**Status: not compiled or run.** It was written without access to the .NET SDK or the emulator. Do a full run once on your machine before interview day (see "First run" below) and fix anything that surfaces.
+This branch swaps the Cosmos DB storage on `main` for Postgres. Everything else (pages, controllers, models) is unchanged.
 
-## First run
+**Who wrote what.** Claude wrote the scaffolding: the Postgres setup, `PollStore` (all of it, including its SQL), the models, `ResponseStore.AddAsync` and its insert statement, and the README. Isaiah wrote the rest by hand, using `PollStore` as a reference: the `responses` table definition in `PostgresBootstrap`, the SQL for listing, getting, updating and existence-checking responses, and the C# for `ResponseStore.ListAsync`, `GetAsync`, `UpdateChoiceAsync` and `ReadResponsesAsync`.
+
+**Status: not compiled or run.** It was written without access to the .NET SDK. Run it once on your machine and fix anything that surfaces.
+
+## Run it
 
 ```bash
-docker compose up -d                      # starts the Cosmos emulator over HTTPS
+docker compose -f compose.postgres.yaml up -d   # starts Postgres 16
 cd src
-dotnet run --urls http://localhost:5000   # waits for the emulator, then serves the app
+dotnet run --urls http://localhost:5000          # connects, then serves the app
 ```
 
-- App: http://localhost:5000
-- Data Explorer (browse the data): port 1234 on localhost. Try http first, then https.
-- The app retries for about a minute while the emulator boots, so starting both back to back is fine.
-
-## Why HTTPS
-
-Microsoft's docs say the .NET SDK doesn't support the emulator's default HTTP mode, so `compose.yaml` starts it with `--protocol https`. The emulator's certificate is self-signed. `Storage/CosmosBootstrap.cs` accepts any certificate, but only when the endpoint is loopback (localhost).
+App: http://localhost:5000. The app retries the connection for about a minute, so starting both back to back is fine.
 
 ## Settings
 
 | Setting | Default |
 |---|---|
-| `COSMOS_ENDPOINT` | `https://localhost:8081` |
-| `COSMOS_KEY` | the publicly documented emulator key (the emulator doesn't check it) |
-
-## Compose file name
-
-Docker Compose finds the file on its own if it is named `compose.yaml` (preferred), `compose.yml`, `docker-compose.yaml` or `docker-compose.yml`. Anything else, like `compose.postgres.yaml` here, needs `-f`:
-
-```bash
-docker compose -f compose.postgres.yaml up -d
-```
+| `POSTGRES_CONNECTION` | `Host=localhost;Port=5432;Username=app;Password=app;Database=app` (matches `compose.postgres.yaml`) |
 
 ## Useful commands
 
 | Command | What it does |
 |---|---|
-| `docker compose up -d` | Start the emulator |
-| `docker compose down` | Stop it, keep the data |
-| `docker compose down -v` | Stop it and wipe the data |
-| `docker compose logs -f cosmos` | Watch emulator logs |
+| `docker compose -f compose.postgres.yaml up -d` | Start Postgres |
+| `docker compose -f compose.postgres.yaml down` | Stop it, keep the data |
+| `docker compose -f compose.postgres.yaml down -v` | Stop it and wipe the data |
+| `docker compose -f compose.postgres.yaml logs -f db` | Watch Postgres logs |
+| `docker exec -it interview-postgres psql -U app -d app` | Open a SQL prompt (try `\dt` to list tables) |
 
-## Data
+The compose file isn't named `compose.yaml`, so every command needs `-f compose.postgres.yaml`.
 
-| Container | Partition key | Fields |
-|---|---|---|
-| `polls` | `/id` | `id`, `title`, `description`, `choices` (each with `id` and `text`), `createdAt` |
-| `responses` | `/pollId` | `id`, `pollId`, `choiceId`, `createdAt` |
+## What the stores must do
 
-A response stores the id of the choice, not its text, so renaming a choice doesn't break old responses. Choices can be renamed or added when editing a poll, never removed. There is no creator field yet; add one when there are accounts.
+| Store method | Job |
+|---|---|
+| `PollStore.CreateAsync` | Save a poll and its choices, return it |
+| `PollStore.GetAsync` | One poll with its choices, or null (also null for an invalid id) |
+| `PollStore.ListAsync` | All polls with their choices, newest first |
+| `PollStore.UpdateAsync` | Edit title, description, rename or add choices; only if the version marker still matches; return Updated, Conflict or NotFound |
+| `ResponseStore.AddAsync` | Record a response |
+| `ResponseStore.ListAsync` | Responses to one poll, newest first |
+| `ResponseStore.GetAsync` | One response, or null |
+| `ResponseStore.UpdateChoiceAsync` | Change the chosen choice; same version check and outcomes |
 
-## Known emulator limits (from Microsoft's docs)
-
-- NoSQL API only, gateway mode only, and only a subset of Cosmos features.
-- The .NET SDK doesn't support bulk execution against the emulator.
-- `vnext-latest` is a rolling tag. Pin a specific tag once you have a version that works for you.
-
-## Fallback: Postgres
-
-`compose.postgres.yaml` starts an empty Postgres 16. Use it if the spec is clearly relational. You would add Npgsql to the project; the C# code here only talks to Cosmos.
+A response stores the id of the choice, not its text, so renaming a choice doesn't break old responses. Choices can be renamed or added when editing a poll, never removed. There is no creator field yet.
 
 ## Code layout
 
 | File | Role |
 |---|---|
-| `src/Program.cs` | Startup only: runs the Cosmos bootstrap, registers the stores, maps controllers |
-| `src/Storage/CosmosBootstrap.cs` | Startup setup: connects, creates the database and both containers, retries while the emulator boots |
-| `src/Storage/PollStore.cs` | Reads and writes poll documents (create, get, list, ETag-checked edit) |
-| `src/Storage/ResponseStore.cs` | Reads and writes responses (add, list for a poll, get, ETag-checked change of choice) |
+| `src/Program.cs` | Startup only: connects to Postgres, registers the stores, maps controllers |
+| `src/Storage/PostgresBootstrap.cs` | Opens the connection pool, waits for Postgres, and runs the table-creation SQL |
+| `src/Storage/PollStore.cs` | Poll reads and writes (done, the reference) |
+| `src/Storage/ResponseStore.cs` | Response reads and writes |
 | `src/Storage/UpdateOutcome.cs` | Updated, Conflict or NotFound, returned by the checked edits |
 | `src/Models/` | `Poll` (with `Choice`), `PollResponse` and the two page view models |
 | `src/Controllers/PollsController.cs` | Front page, create, the poll page, respond and edit poll |
 | `src/Controllers/ResponsesController.cs` | The response page and edit response |
 | `src/Controllers/HealthController.cs` | `/healthz` |
-| `src/Views/Shared/_Layout.cshtml` | The page shell every view sits inside (head, Pico, `site.css`) |
-| `src/Views/Polls/Index.cshtml` | Front page: create form on the left, list of polls on the right |
-| `src/Views/Polls/Details.cshtml` | Poll page: poll info, edit and respond on the left, responses on the right |
-| `src/Views/Responses/Details.cshtml` | Response page: change which choice a response picked |
-| `src/wwwroot/copy-link.js` | The poll page's Copy link button |
-| `src/wwwroot/site.css`, `index.css`, `poll.css` | Shared styles (including the two-column grid), front-page styles, poll and response page styles |
+| `src/Views/` | Razor pages: shared layout, front page, poll page, response page |
+| `src/wwwroot/` | `site.css`, `index.css`, `poll.css` and `copy-link.js` |
 
 ## Addresses
 
