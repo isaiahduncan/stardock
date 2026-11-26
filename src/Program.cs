@@ -1,16 +1,13 @@
-// The emulator ignores authentication, but the SDK still wants a valid-looking key.
-// This is the publicly documented emulator key, not a secret.
-const string WellKnownEmulatorKey =
-    "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
-
 var builder = WebApplication.CreateBuilder(args);
 
-var endpoint = builder.Configuration["COSMOS_ENDPOINT"] ?? "https://localhost:8081";
-var key = builder.Configuration["COSMOS_KEY"] ?? WellKnownEmulatorKey;
+// Matches compose.postgres.yaml. Override with the POSTGRES_CONNECTION setting.
+var connectionString = builder.Configuration["POSTGRES_CONNECTION"]
+    ?? "Host=localhost;Port=5432;Username=app;Password=app;Database=app";
 
-var containers = await CosmosBootstrap.CreateContainersAsync(endpoint, key);
-builder.Services.AddSingleton(new PollStore(containers.Polls));
-builder.Services.AddSingleton(new ResponseStore(containers.Responses));
+var dataSource = await PostgresBootstrap.CreateDataSourceAsync(connectionString);
+builder.Services.AddSingleton(dataSource);
+builder.Services.AddSingleton<PollStore>();
+builder.Services.AddSingleton<ResponseStore>();
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
